@@ -35,7 +35,7 @@ async fn handle_request(req: Request<Body>, count: SharedCount) -> Result<Respon
             Ok(Response::new(Body::from(body)))
         }
         // カウントリセット
-        (&Method::PUT, "/resetcount") => {
+        (&Method::POST, "/resetcount") => {
             let mut count = count.lock().unwrap();
             count.value = 0;
             let body = serde_json::to_string(&*count).unwrap();
