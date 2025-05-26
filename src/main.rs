@@ -22,40 +22,95 @@ struct Count {
 type SharedCount = Arc<Mutex<Count>>;
 
 async fn handle_request(req: Request<Incoming>, count: SharedCount) -> Result<Response<Full<Bytes>>, Infallible> {
-    match (req.method(), req.uri().path()) {
+    let method = req.method().clone();
+    let path = req.uri().path().to_owned();
+    println!("\n\n\nRequest Received!");
+    println!("* Request: {} {}", method, path);
+    println!("* Header:");
+    for (k, v) in req.headers() {
+        println!("    * {}: {:?}", k, v);
+    }
+    let whole_body = req.into_body().collect().await.unwrap().to_bytes();
+    println!("* Body: {:?}", String::from_utf8_lossy(&whole_body));
+    
+    let res = match (&method, path.as_str()) {
         // クライアントページ
         (&Method::GET, "/") => {
             let html = include_str!("../static/index.html");
-            Ok(Response::new(Full::new(Bytes::from(html))))
+            let mut res = Response::new(Full::new(Bytes::from(html)));
+            res.headers_mut().insert(
+                hyper::header::CONTENT_TYPE,
+                hyper::header::HeaderValue::from_static("text/html"),
+            );
+            res
         }
         // カウント取得
         (&Method::GET, "/getcount") => {
             let count = count.lock().unwrap().clone();
             let body = serde_json::to_string(&count).unwrap();
-            Ok(Response::new(Full::new(Bytes::from(body))))
+            let mut res = Response::new(Full::new(Bytes::from(body)));
+            res.headers_mut().insert(
+                hyper::header::CONTENT_TYPE,
+                hyper::header::HeaderValue::from_static("application/json"),
+            );
+            res
         }
         // カウント加算
         (&Method::POST, "/addcount") => {
-            let whole_body = req.into_body().collect().await.unwrap().to_bytes();
-            let add: Count = serde_json::from_slice(&whole_body).unwrap_or(Count { value: 0 });
-            let mut count = count.lock().unwrap();
-            count.value += add.value;
-            let body = serde_json::to_string(&*count).unwrap();
-            Ok(Response::new(Full::new(Bytes::from(body))))
+            match serde_json::from_slice::<Count>(&whole_body) {
+                Ok(add) => {
+                    let mut count = count.lock().unwrap();
+                    count.value += add.value;
+                    let body = serde_json::to_string(&*count).unwrap();
+                    let mut res = Response::new(Full::new(Bytes::from(body)));
+                    res.headers_mut().insert(
+                        hyper::header::CONTENT_TYPE,
+                        hyper::header::HeaderValue::from_static("application/json"),
+                    );
+                    res
+                },
+                Err(_) => {
+                    let mut res: Response<Full<Bytes>> = Response::new(Full::new(Bytes::from("Bad Request (Invalid JSON)")));
+                    *res.status_mut() = StatusCode::BAD_REQUEST;
+                    res.headers_mut().insert(
+                        hyper::header::CONTENT_TYPE,
+                        hyper::header::HeaderValue::from_static("text/plain"),
+                    );
+                    res
+                }
+            }
         }
         // カウントリセット
         (&Method::POST, "/resetcount") => {
             let mut count = count.lock().unwrap();
             count.value = 0;
             let body = serde_json::to_string(&*count).unwrap();
-            Ok(Response::new(Full::new(Bytes::from(body))))
+            let mut res = Response::new(Full::new(Bytes::from(body)));
+            res.headers_mut().insert(
+                hyper::header::CONTENT_TYPE,
+                hyper::header::HeaderValue::from_static("application/json"),
+            );
+            res
         }
         _ => {
-            let mut not_found = Response::default();
-            *not_found.status_mut() = StatusCode::NOT_FOUND;
-            Ok(not_found)
+            let mut res: Response<Full<Bytes>> = Response::new(Full::new(Bytes::from("Not Found")));
+            *res.status_mut() = StatusCode::NOT_FOUND;
+            res.headers_mut().insert(
+                hyper::header::CONTENT_TYPE,
+                hyper::header::HeaderValue::from_static("text/plain"),
+            );
+            res
         }
+    };
+
+    println!("\nResponse: ");
+    println!("* Status: {}", res.status());
+    println!("* Header:");
+    for (k, v) in res.headers() {
+        println!("    * {}: {:?}", k, v);
     }
+    println!("* Body: {:?}", String::from_utf8_lossy(res.body().clone().collect().await.unwrap().to_bytes().as_ref()));
+    Ok(res)
 }
 
 #[tokio::main]
