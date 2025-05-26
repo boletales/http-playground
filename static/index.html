@@ -23,40 +23,9 @@
         <button id="reload">↺</button>
     </div>
     
-    <div class="container">
-        <div class="column">
-            <h3>リクエスト</h3>
-            <div class="log-area">
-                <h4>ヘッダ</h4>
-                <textarea id="req-header" readonly></textarea>
-            </div>
-            <div class="log-area">
-                <h4>ボディ</h4>
-                <textarea id="req-body" readonly></textarea>
-            </div>
-        </div>
-        <div class="column">
-            <h3>レスポンス</h3>
-            <div class="log-area">
-                <h4>ヘッダ</h4>
-                <textarea id="res-header" readonly></textarea>
-            </div>
-            <div class="log-area">
-                <h4>ボディ</h4>
-                <textarea id="res-body" readonly></textarea>
-            </div>
-        </div>
-    </div>
     
     <script>
         async function logRequest(method, url, body) {
-            // リクエストの情報を表示
-            document.getElementById('req-header').value = `${method} ${url}\nContent-Type: application/json`;
-            document.getElementById('req-body').value = body || '';
-            
-            // レスポンス情報をリセット
-            document.getElementById('res-header').value = 'Loading...';
-            document.getElementById('res-body').value = '';
             
             try {
                 const res = await fetch(url, {
@@ -65,15 +34,7 @@
                     body: body ? body : undefined
                 });
                 const text = await res.text();
-                
-                // レスポンスの情報を表示
-                document.getElementById('res-header').value = `Status: ${res.status} ${res.statusText}\n`;
-                Array.from(res.headers.entries()).forEach(([key, value]) => {
-                    document.getElementById('res-header').value += `${key}: ${value}\n`;
-                });
-                
-                document.getElementById('res-body').value = text;
-                
+                                
                 // カウント値を更新
                 if (res.ok && (url.endsWith('getcount') || url.endsWith('addcount') || url.endsWith('resetcount'))) {
                     try {
@@ -84,8 +45,7 @@
                     }
                 }
             } catch (e) {
-                document.getElementById('res-header').value = 'Error';
-                document.getElementById('res-body').value = `${e}`;
+                console.error('Fetch error:', e);
             }
         }
         document.getElementById('add').onclick = () => logRequest('POST', '/addcount', JSON.stringify({ value: 1 }));
