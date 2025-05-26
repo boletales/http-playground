@@ -18,6 +18,7 @@
     <div>
         <input type="text" id="count" readonly value="0">
         <button id="add">+1</button>
+        <button id="sub">-1</button>
         <button id="reset">RESET</button>
         <button id="reload">↺</button>
     </div>
@@ -48,6 +49,7 @@
             }
         }
         document.getElementById('add').onclick = () => logRequest('POST', '/addcount', JSON.stringify({ value: 1 }));
+        document.getElementById('sub').onclick = () => logRequest('POST', '/addcount', JSON.stringify({ value: -1 }));
         document.getElementById('reset').onclick = () => logRequest('PUT', '/resetcount');
         document.getElementById('reload').onclick = () => logRequest('GET', '/getcount');
         window.onload = () => logRequest('GET', '/getcount');
