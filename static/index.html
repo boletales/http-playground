@@ -50,7 +50,7 @@
         }
         document.getElementById('add').onclick = () => logRequest('POST', '/addcount', JSON.stringify({ value: 1 }));
         document.getElementById('sub').onclick = () => logRequest('POST', '/addcount', JSON.stringify({ value: -1 }));
-        document.getElementById('reset').onclick = () => logRequest('PUT', '/resetcount');
+        document.getElementById('reset').onclick = () => logRequest('POST', '/resetcount');
         document.getElementById('reload').onclick = () => logRequest('GET', '/getcount');
         window.onload = () => logRequest('GET', '/getcount');
     </script>
